@@ -1,65 +1,74 @@
 package com.example.demo.service;
 
 import com.example.demo.model.Product;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
 
+@Slf4j
 @Service
 public class ScannerService {
 
     List<Product> productList = new ArrayList<>();
-    public static Set<Integer> existsCodes = new HashSet<>();
+    public static Set<Integer> existsCodesSet = new HashSet<>();
 
-    public void getExistingCodes() {
-        int toTest = 1000;
+    public void getExistingCodes(String url, int from, int to) {
+        int codesToCheck = to - from;
 
-        int countThreads = Thread.activeCount();
-        Runnable[] runners = new Runnable[countThreads];
-        Thread[] threads = new Thread[countThreads];
+        int threadsNumber = Thread.activeCount();
+        Runnable[] runners = new Runnable[threadsNumber];
+        Thread[] threads = new Thread[threadsNumber];
 
-        int perThread = toTest / countThreads;
+        int perThread = codesToCheck / threadsNumber;
 
-        for(int i=0; i<countThreads; i++) {
-            runners[i] = new ProductCodeService((i * perThread) + 1, (i * perThread) + perThread, "https://www.x-kom.pl/p/");
+        for (int i = 0; i < threadsNumber; i++) {
+            int startCode = from + (i * perThread) + 1;
+            int finishCode = from + (i * perThread) + perThread;
+            runners[i] = new ProductCodeService(startCode, finishCode, url);
         }
 
-        for(int i=0; i<countThreads; i++) {
+        for (int i = 0; i < threadsNumber; i++) {
             threads[i] = new Thread(runners[i]);
         }
 
-        for(int i=0; i<countThreads; i++) {
+        for (int i = 0; i < threadsNumber; i++) {
             threads[i].start();
         }
 
-        for(int i=0; i<countThreads; i++) {
+        for (int i = 0; i < threadsNumber; i++) {
             try {
                 threads[i].join();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+//                log.error("Interrupted!", e);
+//                Thread.currentThread().interrupt();
             }
         }
 
+        saveExistsCodesToFile();
+    }
 
-        Object[] existsCodesArray = existsCodes.toArray();
+    @SneakyThrows
+    private void saveExistsCodesToFile() {
+        List<Integer> existsCodesArray = new ArrayList<>(existsCodesSet);
+        Collections.sort(existsCodesArray);
 
         FileWriter myWriter = null;
         try {
             myWriter = new FileWriter("xKomExistsCodes.txt");
 
-            for(int i=0; i<existsCodesArray.length; i++) {
-                myWriter.write(existsCodesArray[i].toString() + "\n");
+            for (Integer integer : existsCodesArray) {
+                myWriter.write(integer.toString() + "\n");
             }
 
             myWriter.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     public void getData() {

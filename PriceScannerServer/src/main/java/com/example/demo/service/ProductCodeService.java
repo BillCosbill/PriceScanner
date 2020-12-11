@@ -4,26 +4,24 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class ProductCodeService implements Runnable {
+public class ProductCodeService extends Thread {
 
-    private int start;
-    private int end;
+    private int startCode;
+    private int finishCode;
 
     private String url;
 
     public ProductCodeService(int startCode, int finishCode, String url) {
-        this.start = startCode;
-        this.end = finishCode;
+        this.startCode = startCode;
+        this.finishCode = finishCode;
         this.url = url;
     }
 
     @Override
     public void run() {
-        String redirectUrl  = "";
         int code;
 
-        for(int i=start; i<end; i++) {
-            redirectUrl = url + i;
+        for (int i = startCode; i < finishCode; i++) {
 
             try {
                 HttpURLConnection connection = (HttpURLConnection) new URL(url + i).openConnection();
@@ -32,11 +30,7 @@ public class ProductCodeService implements Runnable {
                 code = connection.getResponseCode();
 
                 if (code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_MOVED_TEMP) {
-                    redirectUrl = connection.getHeaderField("Location");
-                }
-
-                if (!redirectUrl.equals(url + i)) {
-                    ScannerService.existsCodes.add(i);
+                    ScannerService.existsCodesSet.add(i);
                 }
 
             } catch (IOException e) {

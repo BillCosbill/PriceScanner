@@ -21,7 +21,7 @@ public class PriceScannerApplication {
     @EventListener(ApplicationReadyEvent.class)
     public void test() {
 //        scannerService.getExistsCodes();
-        scannerService.getExistingCodes();
+        scannerService.getExistingCodes("https://www.x-kom.pl/p/", 0, 1000);
 
     }
 
