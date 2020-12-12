@@ -1,15 +1,18 @@
 package com.example.demo.service;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+@Slf4j
 public class ProductCodeService extends Thread {
 
-    private int startCode;
-    private int finishCode;
+    private final int startCode;
+    private final int finishCode;
 
-    private String url;
+    private final String url;
 
     public ProductCodeService(int startCode, int finishCode, String url) {
         this.startCode = startCode;
@@ -33,8 +36,9 @@ public class ProductCodeService extends Thread {
                     ScannerService.existsCodesSet.add(i);
                 }
 
+                connection.disconnect();
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Interrupted at code number " + i, e);
             }
         }
     }
