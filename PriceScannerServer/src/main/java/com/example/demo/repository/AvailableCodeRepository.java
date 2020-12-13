@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface CodeRepository extends JpaRepository<Code, Long> {
+public interface AvailableCodeRepository extends JpaRepository<AvailableCode, Long> {
     boolean existsByCode(Long code);
-    Optional<AvailableCode> findByCode(Long code);
+    Optional<Code> findByCode(Long code);
 }

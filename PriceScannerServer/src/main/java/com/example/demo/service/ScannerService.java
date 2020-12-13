@@ -1,19 +1,18 @@
 package com.example.demo.service;
 
-import com.example.demo.model.Code;
-import com.example.demo.model.Product;
-import com.example.demo.model.Shop;
+import com.example.demo.model.*;
+import com.example.demo.repository.AvailableCodeRepository;
 import com.example.demo.repository.CodeRepository;
+import com.example.demo.repository.ErrorCodeRepository;
 import com.example.demo.repository.ShopRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -21,14 +20,19 @@ public class ScannerService {
 
     private final CodeRepository codeRepository;
     private final ShopRepository shopRepository;
+    private final ErrorCodeRepository errorCodeRepository;
+    private final AvailableCodeRepository availableCodeRepository;
 
     List<Product> productList = new ArrayList<>();
     public static Set<Integer> existsCodesSet = new HashSet<>();
     public static Set<Code> availableCodesSet = new HashSet<>();
+    public static Set<Code> errorCodesSet = new HashSet<>();
 
-    public ScannerService(CodeRepository codeRepository, ShopRepository shopRepository) {
+    public ScannerService(CodeRepository codeRepository, ShopRepository shopRepository, ErrorCodeRepository errorCodeRepository, AvailableCodeRepository availableCodeRepository) {
         this.codeRepository = codeRepository;
         this.shopRepository = shopRepository;
+        this.errorCodeRepository = errorCodeRepository;
+        this.availableCodeRepository = availableCodeRepository;
     }
 
     //TODO nie działa kiedy jest za mało codesToCheck
@@ -41,6 +45,8 @@ public class ScannerService {
         Thread[] threads = new Thread[threadsNumber];
 
         int perThread = codesToCheck / threadsNumber;
+
+        log.info("Scanning " + url + " started!");
 
         for (int i = 0; i < threadsNumber; i++) {
             int startCode = from + (i * perThread);
@@ -74,12 +80,35 @@ public class ScannerService {
         saveExistsCodesToDatabase(shop);
     }
 
+    public void getCodesFromFile(Shop shop) {
+        try {
+            File myObj = new File("xKomExistsCodes");
+            Scanner myReader = new Scanner(myObj);
+            while (myReader.hasNextLine()) {
+                String data = myReader.nextLine();
+
+                if (!codeRepository.existsByCode(Long.valueOf(data))) {
+                    Code code = new Code();
+                    code.setCode(Long.valueOf(data));
+                    code.setShop(shop);
+                    codeRepository.save(code);
+                }
+            }
+            myReader.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        log.info("Getting codes finished!");
+    }
+
     private void saveExistsCodesToDatabase(Shop shop) {
-        List<Integer> existsCodesArray = new ArrayList<>(existsCodesSet);
+
+        log.info("Saving existing codes to database started!");
 
         int newCodes = 0;
 
-        for (Integer integer : existsCodesArray) {
+        for (Integer integer : existsCodesSet) {
             if (!codeRepository.existsByCode(integer.longValue())) {
                 Code code = new Code();
                 code.setCode(integer.longValue());
@@ -106,6 +135,7 @@ public class ScannerService {
 
         int perThread = countCodes / threadsNumber;
 
+        log.info("Started searching for available codes");
 
         for (int i = 0; i < threadsNumber; i++) {
             int startCode = (i * perThread);
@@ -135,22 +165,35 @@ public class ScannerService {
             }
         }
 
+        log.info("Finished searching for available codes");
         setAvailableCodesInDatabase();
     }
 
 
     private void setAvailableCodesInDatabase() {
-        List<Code> availableCodesArray = new ArrayList<>(availableCodesSet);
+        for (Code code : errorCodesSet) {
+            ErrorCode errorCode = new ErrorCode();
+            errorCode.setCode(code.getCode());
+            errorCode.setShop(code.getShop());
 
-        int newAvailableCodes = 0;
-
-        for (Code code : availableCodesArray) {
-            code.setEnable(true);
-            codeRepository.save(code);
-            newAvailableCodes++;
+            if(!errorCodeRepository.existsByCode(errorCode.getCode())){
+                errorCodeRepository.save(errorCode);
+            }
         }
 
-        log.info("Available codes saved to database. Found " + newAvailableCodes + " new available codes");
+        for (Code code : availableCodesSet) {
+            AvailableCode availableCode = new AvailableCode();
+            availableCode.setCode(code.getCode());
+            availableCode.setShop(code.getShop());
+
+            if(!errorCodeRepository.existsByCode(code.getCode())){
+                availableCodeRepository.save(availableCode);
+            }
+        }
+
+
+        log.info("Detected " + errorCodesSet.size() + " error codes");
+        log.info("Available codes saved to database. Found " + availableCodesSet.size() + " new available codes");
     }
 
     private void saveExistsCodesToFile(String fileName) {

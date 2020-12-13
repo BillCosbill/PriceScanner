@@ -31,20 +31,27 @@ public class AvailableCodesScannerService extends Thread {
             String fullUrl = shop.getUrlToSearchProduct() + code.getCode();
 
             try {
-                Document doc = Jsoup.connect(fullUrl).get();
+                Document doc = Jsoup.connect(fullUrl).timeout(60 * 1000).get();
 
-                if (!fullUrl.equals(doc.location())) {
-                    String cannotBeBought = doc.getElementsByClass("sc-1jultii-1").first().text();
+                if(doc.getElementsByClass("lw463u-5").first() != null && doc.getElementsByClass("lw463u-5").first().text().equals("Przepraszamy")){
+                    log.error("Product with code: " + code.getCode() + " not found");
+                } else {
+                    if (doc.getElementsByClass("sc-1jultii-1").first() == null || fullUrl.equals(doc.location())) {
+                        log.error("Something went wrong checking product: " + fullUrl);
+                        ScannerService.errorCodesSet.add(code);
+                    } else {
+                        String cannotBeBought = doc.getElementsByClass("sc-1jultii-1").first().text();
 
-                    if(!cannotBeBought.equals("Wycofany")) {
-                        ScannerService.availableCodesSet.add(code);
-                        log.info("Available code found: " + code.getCode());
+                        if(!cannotBeBought.equals("Wycofany")) {
+                            ScannerService.availableCodesSet.add(code);
+                            log.info("Available code found: " + code.getCode());
+                        }
                     }
                 }
             } catch (IOException e) {
-                log.error("IOException at code number " + i, e);
+                log.error("IOException at code number " + code.getCode(), e);
+                ScannerService.errorCodesSet.add(code);
             }
-
         }
 
     }

@@ -2,7 +2,6 @@ package com.example.demo.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
@@ -10,8 +9,8 @@ import javax.persistence.*;
 @Entity
 @Data
 @NoArgsConstructor
-@Table(name = "x_kom_code")
-public class Code {
+@Table(name = "x_kom_available_code")
+public class AvailableCode {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
