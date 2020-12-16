@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface AvailableCodeRepository extends JpaRepository<AvailableCode, Long> {
     boolean existsByCode(Long code);
     Optional<Code> findByCode(Long code);
+    void deleteByCode(Long code);
 }

@@ -1,6 +1,5 @@
 package com.example.demo;
 
-import com.example.demo.model.Code;
 import com.example.demo.model.Shop;
 import com.example.demo.repository.CodeRepository;
 import com.example.demo.repository.ShopRepository;
@@ -10,7 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 
-import java.util.List;
 import java.util.Optional;
 
 @SpringBootApplication
@@ -50,6 +48,7 @@ public class PriceScannerApplication {
             shop = shopOpt.get();
         }
 
+//        scannerService.getCodesFromFile(shop);
 
 //        scannerService.getCodesFromFile(shop);
 //
@@ -61,18 +60,28 @@ public class PriceScannerApplication {
 //        }
 //
 
-        if (shop != null) {
-            scannerService.getExistingCodes(shop, 485000, 490000);
-        }
+//        if (shop != null) {
+//            scannerService.getExistingCodes(shop, 485000, 490000);
+//        }
+//
+//        shopOpt = shopRepository.findByUrlAndFetchCodes(shopNew.getUrl());
+//
+//        if (shopOpt.isPresent()) {
+//            shop = shopOpt.get();
+//        }
+//
+//        if (shop != null) {
+//            scannerService.findAvailableProductCodes(shop);
+//        }
 
-        shopOpt = shopRepository.findByUrlAndFetchCodes(shopNew.getUrl());
+        shopOpt = shopRepository.findByUrlAndFetchErrorCodes(shopNew.getUrl());
 
         if (shopOpt.isPresent()) {
             shop = shopOpt.get();
         }
 
         if (shop != null) {
-            scannerService.findEnableProductCodes(shop);
+            scannerService.checkErorrCodes(shop);
         }
     }
 

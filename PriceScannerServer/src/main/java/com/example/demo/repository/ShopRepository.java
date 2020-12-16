@@ -16,4 +16,10 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
 
     @Query("SELECT c FROM Shop c JOIN FETCH c.productCodes WHERE c.url = (:url)")
     Optional<Shop> findByUrlAndFetchCodes(@Param("url") String url);
+
+    @Query("SELECT c FROM Shop c JOIN FETCH c.errorCodes WHERE c.id = (:id)")
+    Optional<Shop> findByIdAndFetchErrorCodes(@Param("id") Long id);
+
+    @Query("SELECT c FROM Shop c JOIN FETCH c.errorCodes WHERE c.url = (:url)")
+    Optional<Shop> findByUrlAndFetchErrorCodes(@Param("url") String url);
 }

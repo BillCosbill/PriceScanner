@@ -6,6 +6,8 @@ import com.example.demo.repository.CodeRepository;
 import com.example.demo.repository.ErrorCodeRepository;
 import com.example.demo.repository.ShopRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -81,6 +83,7 @@ public class ScannerService {
     }
 
     public void getCodesFromFile(Shop shop) {
+        log.info("Getting codes from file started!");
         try {
             File myObj = new File("xKomExistsCodes");
             Scanner myReader = new Scanner(myObj);
@@ -99,7 +102,7 @@ public class ScannerService {
             e.printStackTrace();
         }
 
-        log.info("Getting codes finished!");
+        log.info("Getting codes from file finished.");
     }
 
     private void saveExistsCodesToDatabase(Shop shop) {
@@ -121,7 +124,7 @@ public class ScannerService {
         log.info("Existing codes saved to database. Found " + newCodes + " new codes");
     }
 
-    public void findEnableProductCodes(Shop shop) {
+    public void findAvailableProductCodes(Shop shop) {
 
         int threadsNumber = Thread.activeCount();
         Runnable[] runners = new Runnable[threadsNumber];
@@ -167,6 +170,54 @@ public class ScannerService {
 
         log.info("Finished searching for available codes");
         setAvailableCodesInDatabase();
+    }
+
+    public void checkErorrCodes(Shop shop) {
+        log.info("Started checking error codes");
+
+        for (ErrorCode errorCode: shop.getErrorCodes()) {
+
+            String fullUrl = shop.getUrlToSearchProduct() + errorCode.getCode();
+
+            try {
+                Document doc = Jsoup.connect(fullUrl).userAgent("Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36").timeout(60 * 1000).get();
+
+                if(doc.getElementsByClass("lw463u-5").first() != null && doc.getElementsByClass("lw463u-5").first().text().equals("Przepraszamy")){
+                    log.error("Product with code: " + errorCode.getCode() + " not found");
+                } else {
+                    if (doc.getElementsByClass("sc-1jultii-1").first() == null || fullUrl.equals(doc.location())) {
+                        log.error("Something went wrong checking product: " + fullUrl);
+                        if(!errorCodeRepository.existsByCode(errorCode.getCode())){
+                            errorCodeRepository.save(errorCode);
+                        }
+                    } else {
+                        String cannotBeBought = doc.getElementsByClass("sc-1jultii-1").first().text();
+
+                        if(!cannotBeBought.equals("Wycofany")) {
+                            if(!availableCodeRepository.existsByCode(errorCode.getCode())){
+                                AvailableCode code = new AvailableCode();
+                                code.setCode(errorCode.getCode());
+                                code.setShop(errorCode.getShop());
+                                availableCodeRepository.save(code);
+                                errorCodeRepository.delete(errorCode);
+                                log.info("Repaired code: " + errorCode.getCode());
+                            }
+                        } else {
+                            if(errorCodeRepository.existsByCode(errorCode.getCode())){
+                                errorCodeRepository.delete(errorCode);
+                                log.info("Repaired code: " + errorCode.getCode());
+                            }
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                log.error("IOException at code number " + errorCode.getCode(), e);
+                if(!errorCodeRepository.existsByCode(errorCode.getCode())){
+                    errorCodeRepository.save(errorCode);
+                }
+            }
+        }
+        log.info("Finished checking error codes. Error codes left: " + errorCodeRepository.findAll().size());
     }
 
 

@@ -31,7 +31,8 @@ public class AvailableCodesScannerService extends Thread {
             String fullUrl = shop.getUrlToSearchProduct() + code.getCode();
 
             try {
-                Document doc = Jsoup.connect(fullUrl).timeout(60 * 1000).get();
+                // TODO check your useragent: https://gs.statcounter.com/detect
+                Document doc = Jsoup.connect(fullUrl).userAgent("Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36").timeout(60 * 1000).get();
 
                 if(doc.getElementsByClass("lw463u-5").first() != null && doc.getElementsByClass("lw463u-5").first().text().equals("Przepraszamy")){
                     log.error("Product with code: " + code.getCode() + " not found");
@@ -44,7 +45,7 @@ public class AvailableCodesScannerService extends Thread {
 
                         if(!cannotBeBought.equals("Wycofany")) {
                             ScannerService.availableCodesSet.add(code);
-                            log.info("Available code found: " + code.getCode());
+//                            log.info("Available code found: " + code.getCode());
                         }
                     }
                 }
