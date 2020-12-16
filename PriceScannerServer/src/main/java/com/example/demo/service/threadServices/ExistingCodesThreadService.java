@@ -31,6 +31,8 @@ public class ExistingCodesThreadService extends Thread {
             try {
                 HttpURLConnection connection = (HttpURLConnection) new URL(url + i).openConnection();
                 connection.setInstanceFollowRedirects(false);
+                // TODO keep changing useragent to avoid beeing blocked https://developers.whatismybrowser.com/useragents/explore/operating_system_name/windows/
+                connection.addRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36");
 
                 statusCode = connection.getResponseCode();
 

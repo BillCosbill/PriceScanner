@@ -35,6 +35,7 @@ public class AvailableCodesThreadService extends Thread {
             try {
                 // TODO check your useragent: https://gs.statcounter.com/detect
                 Document doc = Jsoup.connect(fullUrl)
+                                    // TODO keep changing useragent to avoid beeing blocked https://developers.whatismybrowser.com/useragents/explore/operating_system_name/windows/
                                     .userAgent("Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
                                     .timeout(60 * 1000).get();
 
