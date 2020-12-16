@@ -5,7 +5,7 @@ import lombok.*;
 import javax.persistence.*;
 import java.util.List;
 
-// TODO jak nadpiszé lombokiem toString() to przy metodzie findEnableProductCodes() wywala sie program
+// TODO jak nadpiszę lombokiem toString() to przy metodzie findEnableProductCodes() wywala sie program
 @Entity
 @Getter
 @Setter

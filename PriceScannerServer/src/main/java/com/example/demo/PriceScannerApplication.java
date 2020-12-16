@@ -3,6 +3,8 @@ package com.example.demo;
 import com.example.demo.model.Shop;
 import com.example.demo.repository.CodeRepository;
 import com.example.demo.repository.ShopRepository;
+import com.example.demo.service.AvailableCodesService;
+import com.example.demo.service.ExistingCodesService;
 import com.example.demo.service.ScannerService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,15 +17,18 @@ import java.util.Optional;
 public class PriceScannerApplication {
 
     private final ScannerService scannerService;
+    private final AvailableCodesService availableCodesService;
+    private final ExistingCodesService existingCodesService;
     private final ShopRepository shopRepository;
     private final CodeRepository codeRepository;
 
-    public PriceScannerApplication(ScannerService scannerService, ShopRepository shopRepository, CodeRepository codeRepository) {
+    public PriceScannerApplication(ScannerService scannerService, AvailableCodesService availableCodesService, ExistingCodesService existingCodesService, ShopRepository shopRepository, CodeRepository codeRepository) {
         this.scannerService = scannerService;
+        this.availableCodesService = availableCodesService;
+        this.existingCodesService = existingCodesService;
         this.shopRepository = shopRepository;
         this.codeRepository = codeRepository;
     }
-
 
     public static void main(String[] args) {
         SpringApplication.run(PriceScannerApplication.class, args);
@@ -49,7 +54,7 @@ public class PriceScannerApplication {
         }
 
 //        scannerService.getCodesFromFile(shop);
-
+//
 //        scannerService.getCodesFromFile(shop);
 //
 //        shopOpt = shopRepository.findByUrl(shopNew.getUrl());
@@ -59,9 +64,9 @@ public class PriceScannerApplication {
 //            shop = shopOpt.get();
 //        }
 //
-
+//
 //        if (shop != null) {
-//            scannerService.getExistingCodes(shop, 485000, 490000);
+//            existingCodesService.getExistingCodesFromRange(shop, 485000, 490000);
 //        }
 //
 //        shopOpt = shopRepository.findByUrlAndFetchCodes(shopNew.getUrl());
@@ -71,7 +76,7 @@ public class PriceScannerApplication {
 //        }
 //
 //        if (shop != null) {
-//            scannerService.findAvailableProductCodes(shop);
+//            availableCodesService.findAvailableProductCodes(shop);
 //        }
 
         shopOpt = shopRepository.findByUrlAndFetchErrorCodes(shopNew.getUrl());
@@ -81,7 +86,7 @@ public class PriceScannerApplication {
         }
 
         if (shop != null) {
-            scannerService.checkErorrCodes(shop);
+            availableCodesService.checkErorrCodes(shop);
         }
     }
 
