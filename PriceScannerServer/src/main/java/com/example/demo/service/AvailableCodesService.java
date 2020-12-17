@@ -12,8 +12,10 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Slf4j
@@ -154,5 +156,43 @@ public class AvailableCodesService {
             }
         }
         log.info("Finished checking error codes. Error codes left: " + errorCodeRepository.findAll().size());
+    }
+
+    public void saveAvailableCodesToFile(String fileName) {
+        List<AvailableCode> availableCodes = availableCodeRepository.findAll();
+
+        FileWriter myWriter = null;
+        try {
+            myWriter = new FileWriter(fileName + ".txt");
+
+            for (AvailableCode availableCode : availableCodes) {
+                myWriter.write(availableCode.getCode() + "\n");
+            }
+
+            myWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        log.info("Available codes saved to file: " + fileName + ".txt");
+    }
+
+    public void saveErrorCodesToFile(String fileName) {
+        List<ErrorCode> errorCodes = errorCodeRepository.findAll();
+
+        FileWriter myWriter = null;
+        try {
+            myWriter = new FileWriter(fileName + ".txt");
+
+            for (ErrorCode errorCode : errorCodes) {
+                myWriter.write(errorCode.getCode() + "\n");
+            }
+
+            myWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        log.info("Error codes saved to file: " + fileName + ".txt");
     }
 }

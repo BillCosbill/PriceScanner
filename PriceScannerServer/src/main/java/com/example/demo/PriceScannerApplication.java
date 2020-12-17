@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.demo.model.AvailableCode;
 import com.example.demo.model.Shop;
 import com.example.demo.repository.CodeRepository;
 import com.example.demo.repository.ShopRepository;
@@ -38,20 +39,23 @@ public class PriceScannerApplication {
     @EventListener(ApplicationReadyEvent.class)
     public void fillDB() {
 
-        Shop shopNew = new Shop();
-        shopNew.setUrl("https://www.x-kom.pl/");
-        shopNew.setName("x-kom");
-        shopNew.setUrlToSearchProduct("https://www.x-kom.pl/p/");
+        availableCodesService.saveAvailableCodesToFile("availableXKomCodes");
+        availableCodesService.saveErrorCodesToFile("errorXKomCodes");
 
-        if (!shopRepository.existsByUrl(shopNew.getUrl())) {
-            shopRepository.save(shopNew);
-        }
-
-        Optional<Shop> shopOpt = shopRepository.findByUrl(shopNew.getUrl());
-        Shop shop = null;
-        if (shopOpt.isPresent()) {
-            shop = shopOpt.get();
-        }
+//        Shop shopNew = new Shop();
+//        shopNew.setUrl("https://www.x-kom.pl/");
+//        shopNew.setName("x-kom");
+//        shopNew.setUrlToSearchProduct("https://www.x-kom.pl/p/");
+//
+//        if (!shopRepository.existsByUrl(shopNew.getUrl())) {
+//            shopRepository.save(shopNew);
+//        }
+//
+//        Optional<Shop> shopOpt = shopRepository.findByUrl(shopNew.getUrl());
+//        Shop shop = null;
+//        if (shopOpt.isPresent()) {
+//            shop = shopOpt.get();
+//        }
 
 //        scannerService.getCodesFromFile(shop);
 //
@@ -79,15 +83,15 @@ public class PriceScannerApplication {
 //            availableCodesService.findAvailableProductCodes(shop);
 //        }
 
-        shopOpt = shopRepository.findByUrlAndFetchErrorCodes(shopNew.getUrl());
-
-        if (shopOpt.isPresent()) {
-            shop = shopOpt.get();
-        }
-
-        if (shop != null) {
-            availableCodesService.checkErorrCodes(shop);
-        }
+//        shopOpt = shopRepository.findByUrlAndFetchErrorCodes(shopNew.getUrl());
+//
+//        if (shopOpt.isPresent()) {
+//            shop = shopOpt.get();
+//        }
+//
+//        if (shop != null) {
+//            availableCodesService.checkErorrCodes(shop);
+//        }
     }
 
 }
