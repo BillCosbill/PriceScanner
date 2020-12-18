@@ -76,13 +76,18 @@ public class PriceScannerApplication {
 //            existingCodesService.getExistingCodesFromRangeInSeries(shop, 0, 10000, 2000);
 //        }
 
-        shopOpt = shopRepository.findByUrlAndFetchCodes(shopNew.getUrl());
+//        shopOpt = shopRepository.findByUrlAndFetchCodes(shopNew.getUrl());
+//        if (shopOpt.isPresent()) {
+//            shop = shopOpt.get();
+//        }
+
+        shopOpt = shopRepository.findByUrlAndFetchErrorCodes(shopNew.getUrl());
         if (shopOpt.isPresent()) {
             shop = shopOpt.get();
         }
 
         if (shop != null) {
-            availableCodesService.findAvailableProductCodes(shop);
+            availableCodesService.checkErorrCodes(shop);
         }
 
 
@@ -107,6 +112,7 @@ public class PriceScannerApplication {
 //        if (shop != null) {
 //            availableCodesService.checkErorrCodes(shop);
 //        }
+
     }
 
 }

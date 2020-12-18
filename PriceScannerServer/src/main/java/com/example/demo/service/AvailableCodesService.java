@@ -99,7 +99,7 @@ public class AvailableCodesService {
         }
 
         log.info("Finished searching for available codes");
-//        setAvailableCodesInDatabase();
+        setAvailableCodesInDatabase();
     }
 
     private void setAvailableCodesInDatabase() {
