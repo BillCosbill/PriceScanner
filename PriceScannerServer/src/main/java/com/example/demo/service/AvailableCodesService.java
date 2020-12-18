@@ -26,6 +26,8 @@ public class AvailableCodesService {
     public static Set<Code> availableCodesSet = new HashSet<>();
     public static Set<Code> errorCodesSet = new HashSet<>();
 
+    public final static int THREADS_NUMBER = 1000;
+
     private final ErrorCodeRepository errorCodeRepository;
     private final AvailableCodeRepository availableCodeRepository;
 
@@ -36,30 +38,47 @@ public class AvailableCodesService {
 
     public void findAvailableProductCodes(Shop shop) {
 
-        int threadsNumber = Thread.activeCount();
+        int threadsNumber = THREADS_NUMBER;
         Runnable[] runners = new Runnable[threadsNumber];
         Thread[] threads = new Thread[threadsNumber];
 
-        int countCodes = shop.getProductCodes().size();
+        int codesToCheck = shop.getProductCodes().size();
 
-        if (countCodes <= 0) {
+        if (codesToCheck < threadsNumber) {
+            threadsNumber = codesToCheck;
+        }
+
+        if (codesToCheck <= 0) {
             return;
         }
 
-        int perThread = countCodes / threadsNumber;
+        int perThread = (int) (Math.ceil((double) codesToCheck / (threadsNumber - 1)));
+
+        if (perThread <= 0) {
+            perThread = 1;
+        }
 
         log.info("Started searching for available codes");
-        log.info("This may take up to " + countCodes * (ExistingCodesThreadService.MAX_DELAY_IN_MILLISECONDS / 1000) / threadsNumber  + " seconds");
+        log.info("This may take up to " + codesToCheck * (ExistingCodesThreadService.MAX_DELAY_IN_MILLISECONDS / 1000) / threadsNumber  + " seconds");
 
         for (int i = 0; i < threadsNumber; i++) {
             int startCode = (i * perThread);
-            int finishCode = (i * perThread) + perThread + 1;
+            int finishCode = (i * perThread) + perThread - 1;
 
-            if (i == threadsNumber - 1) {
-                finishCode = countCodes;
+            if (i == threadsNumber - 1 || finishCode > codesToCheck) {
+                finishCode = codesToCheck;
+            }
+
+            if (startCode > finishCode) {
+                startCode = finishCode;
             }
 
             runners[i] = new AvailableCodesThreadService(startCode, finishCode, shop);
+
+            if (finishCode >= codesToCheck) {
+                threadsNumber = i;
+                break;
+            }
         }
 
         for (int i = 0; i < threadsNumber; i++) {
@@ -80,7 +99,7 @@ public class AvailableCodesService {
         }
 
         log.info("Finished searching for available codes");
-        setAvailableCodesInDatabase();
+//        setAvailableCodesInDatabase();
     }
 
     private void setAvailableCodesInDatabase() {

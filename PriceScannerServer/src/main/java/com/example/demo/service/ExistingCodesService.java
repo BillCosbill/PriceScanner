@@ -18,7 +18,10 @@ import java.util.Set;
 @Service
 public class ExistingCodesService {
 
+    public final static int THREADS_NUMBER = 1000;
+
     public static Set<Integer> existsCodesSet = new HashSet<>();
+    public static Set<Integer> disconnectedCodesSet = new HashSet<>();
 
     private final CodeRepository codeRepository;
 
@@ -30,7 +33,8 @@ public class ExistingCodesService {
         int codesToCheck = to - from;
 
         log.info("Scanning in series started. Range: " + from + " - " + to);
-        log.info("This may take up to " + codesToCheck * (ExistingCodesThreadService.MAX_DELAY_IN_MILLISECONDS / 1000) / Thread.activeCount() + " seconds");
+        log.info("This may take up to " + codesToCheck * (ExistingCodesThreadService.MAX_DELAY_IN_MILLISECONDS / 1000) / THREADS_NUMBER + " seconds");
+        log.info("Number of threads: " + THREADS_NUMBER);
 
         if (codesToCheck < scansPerSeries) {
             getExistingCodesFromRange(shop, from, to);
@@ -51,13 +55,23 @@ public class ExistingCodesService {
 
     public void getExistingCodesFromRange(Shop shop, int from, int to) {
         String url = shop.getUrlToSearchProduct();
+
         int codesToCheck = to - from;
 
-        int threadsNumber = Thread.activeCount();
+        int threadsNumber = THREADS_NUMBER;
+
+        if (codesToCheck < threadsNumber) {
+            threadsNumber = codesToCheck;
+        }
+
         Runnable[] runners = new Runnable[threadsNumber];
         Thread[] threads = new Thread[threadsNumber];
 
-        int perThread = codesToCheck / threadsNumber;
+        int perThread = (int) (Math.ceil((double) codesToCheck / (threadsNumber - 1)));
+
+        if (perThread <= 0) {
+            perThread = 1;
+        }
 
         log.info("Scanning " + url + " started! Code ranges: " + from + " - " + to);
 
@@ -65,11 +79,19 @@ public class ExistingCodesService {
             int startCode = from + (i * perThread);
             int finishCode = from + (i * perThread) + perThread - 1;
 
-            if (i == threadsNumber - 1) {
+            if (i == threadsNumber - 1 || finishCode > to) {
                 finishCode = to;
             }
 
+            if (startCode > finishCode) {
+                startCode = finishCode;
+            }
+
             runners[i] = new ExistingCodesThreadService(startCode, finishCode, url);
+
+            if (finishCode >= to) {
+                break;
+            }
         }
 
         for (int i = 0; i < threadsNumber; i++) {
@@ -90,6 +112,7 @@ public class ExistingCodesService {
         }
 
         log.info("Scanning " + url + " finished! Code ranges: " + from + " - " + to);
+        saveDisconnectedCodesToFile("disconnectedCodes_" + from + "_" + to);
 //        saveExistsCodesToDatabase(shop);
     }
 
@@ -110,6 +133,34 @@ public class ExistingCodesService {
         }
 
         log.info("Existing codes saved to database. Found " + newCodes + " new codes");
+    }
+
+    private void saveDisconnectedCodesToFile(String fileName) {
+
+        if (disconnectedCodesSet.isEmpty()) {
+            return;
+        }
+
+        log.info("Saving disconnected codes to file started!");
+
+        int disconnectedCodes = 0;
+
+        FileWriter myWriter = null;
+        try {
+            myWriter = new FileWriter(fileName + ".txt");
+
+            for (Integer integer : disconnectedCodesSet) {
+                disconnectedCodes++;
+                myWriter.write(integer.toString() + "\n");
+            }
+
+            myWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        disconnectedCodesSet.clear();
+        log.info("Disconnected codes saved to file. Found " + disconnectedCodes + " disconnected codes");
     }
 
     public void saveExistsCodesToFile(String fileName) {

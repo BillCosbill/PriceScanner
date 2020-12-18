@@ -13,8 +13,8 @@ import java.util.Random;
 @Slf4j
 public class AvailableCodesThreadService extends Thread {
 
-    public static final int MIN_DELAY_IN_MILLISECONDS = 2000;
-    public static final int MAX_DELAY_IN_MILLISECONDS = 5000;
+    public static final int MIN_DELAY_IN_MILLISECONDS = 10000;
+    public static final int MAX_DELAY_IN_MILLISECONDS = 15000;
 
     private final Shop shop;
 
@@ -27,13 +27,19 @@ public class AvailableCodesThreadService extends Thread {
         this.finishCode = finishCode;
         this.shop = shop;
         this.randomDelay = new Random();
-
     }
 
     @Override
     public void run() {
 
         for (int i = startCode; i < finishCode; i++) {
+
+            try {
+                Thread.sleep(randomDelay.nextInt(MAX_DELAY_IN_MILLISECONDS - MIN_DELAY_IN_MILLISECONDS) + (long)MIN_DELAY_IN_MILLISECONDS);
+            } catch (InterruptedException e) {
+                log.error("Error while trying to make sleep delay at current thread");
+                Thread.currentThread().interrupt();
+            }
 
             Code code = shop.getProductCodes().get(i);
             String fullUrl = shop.getUrlToSearchProduct() + code.getCode();
@@ -59,19 +65,12 @@ public class AvailableCodesThreadService extends Thread {
 
                         if (!cannotBeBought.equals("Wycofany")) {
                             AvailableCodesService.availableCodesSet.add(code);
-                        }
+                      }
                     }
                 }
             } catch (IOException e) {
                 log.error("IOException at code number " + code.getCode(), e);
                 AvailableCodesService.errorCodesSet.add(code);
-            }
-
-            try {
-                Thread.sleep(randomDelay.nextInt(MAX_DELAY_IN_MILLISECONDS - MIN_DELAY_IN_MILLISECONDS) + (long)MIN_DELAY_IN_MILLISECONDS);
-            } catch (InterruptedException e) {
-                log.error("Error while trying to make sleep delay at current thread");
-                Thread.currentThread().interrupt();
             }
         }
     }

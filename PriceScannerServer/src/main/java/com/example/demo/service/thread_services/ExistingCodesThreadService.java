@@ -11,8 +11,8 @@ import java.util.Random;
 @Slf4j
 public class ExistingCodesThreadService extends Thread {
 
-    public static final int MIN_DELAY_IN_MILLISECONDS = 2000;
-    public static final int MAX_DELAY_IN_MILLISECONDS = 5000;
+    public static final int MIN_DELAY_IN_MILLISECONDS = 10000;
+    public static final int MAX_DELAY_IN_MILLISECONDS = 15000;
 
     private final int startCode;
     private final int finishCode;
@@ -31,7 +31,15 @@ public class ExistingCodesThreadService extends Thread {
     public void run() {
         int statusCode;
 
-        for (int i = startCode; i < finishCode; i++) {
+        for (int i = startCode; i <= finishCode; i++) {
+
+            try {
+                Thread.sleep(randomDelay.nextInt(MAX_DELAY_IN_MILLISECONDS - MIN_DELAY_IN_MILLISECONDS) + (long)MIN_DELAY_IN_MILLISECONDS);
+            } catch (InterruptedException e) {
+                log.error("Error while trying to make sleep delay at current thread");
+                Thread.currentThread().interrupt();
+            }
+
             try {
                 HttpURLConnection connection = (HttpURLConnection) new URL(url + i).openConnection();
                 connection.setInstanceFollowRedirects(false);
@@ -50,13 +58,7 @@ public class ExistingCodesThreadService extends Thread {
                 connection.disconnect();
             } catch (IOException e) {
                 log.error("Interrupted at code number " + i, e);
-            }
-
-            try {
-                Thread.sleep(randomDelay.nextInt(MAX_DELAY_IN_MILLISECONDS - MIN_DELAY_IN_MILLISECONDS) + (long)MIN_DELAY_IN_MILLISECONDS);
-            } catch (InterruptedException e) {
-                log.error("Error while trying to make sleep delay at current thread");
-                Thread.currentThread().interrupt();
+                ExistingCodesService.disconnectedCodesSet.add(i);
             }
         }
     }
