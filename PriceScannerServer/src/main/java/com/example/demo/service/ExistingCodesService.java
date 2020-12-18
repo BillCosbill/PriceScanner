@@ -3,7 +3,7 @@ package com.example.demo.service;
 import com.example.demo.model.Code;
 import com.example.demo.model.Shop;
 import com.example.demo.repository.CodeRepository;
-import com.example.demo.service.threadServices.ExistingCodesThreadService;
+import com.example.demo.service.thread_services.ExistingCodesThreadService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +26,28 @@ public class ExistingCodesService {
         this.codeRepository = codeRepository;
     }
 
+    public void getExistingCodesFromRangeInSeries(Shop shop, int from, int to, int scansPerSeries) {
+        int codesToCheck = to - from;
+
+        log.info("Scanning in series started. Range: " + from + " - " + to);
+        log.info("This may take up to " + codesToCheck * (ExistingCodesThreadService.MAX_DELAY_IN_MILLISECONDS / 1000) / Thread.activeCount() + " seconds");
+
+        if (codesToCheck < scansPerSeries) {
+            getExistingCodesFromRange(shop, from, to);
+        } else {
+            for (int i = from; i < to; i += scansPerSeries) {
+                int newToValue = Math.min(i + scansPerSeries, to) - 1;
+
+                if (newToValue == to - 1) {
+                    newToValue++;
+                }
+
+                getExistingCodesFromRange(shop, i, newToValue);
+            }
+        }
+
+        log.info("Scanning in series finished. Range: " + from + " - " + to);
+    }
 
     public void getExistingCodesFromRange(Shop shop, int from, int to) {
         String url = shop.getUrlToSearchProduct();
@@ -37,11 +59,11 @@ public class ExistingCodesService {
 
         int perThread = codesToCheck / threadsNumber;
 
-        log.info("Scanning " + url + " started!");
+        log.info("Scanning " + url + " started! Code ranges: " + from + " - " + to);
 
         for (int i = 0; i < threadsNumber; i++) {
             int startCode = from + (i * perThread);
-            int finishCode = from + (i * perThread) + perThread + 1;
+            int finishCode = from + (i * perThread) + perThread - 1;
 
             if (i == threadsNumber - 1) {
                 finishCode = to;
@@ -67,8 +89,8 @@ public class ExistingCodesService {
             }
         }
 
-        log.info("Scanning " + url + " finished!");
-        saveExistsCodesToDatabase(shop);
+        log.info("Scanning " + url + " finished! Code ranges: " + from + " - " + to);
+//        saveExistsCodesToDatabase(shop);
     }
 
     private void saveExistsCodesToDatabase(Shop shop) {

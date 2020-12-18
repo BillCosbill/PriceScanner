@@ -39,23 +39,23 @@ public class PriceScannerApplication {
     @EventListener(ApplicationReadyEvent.class)
     public void fillDB() {
 
-        availableCodesService.saveAvailableCodesToFile("availableXKomCodes");
-        availableCodesService.saveErrorCodesToFile("errorXKomCodes");
+//        availableCodesService.saveAvailableCodesToFile("availableXKomCodes");
+//        availableCodesService.saveErrorCodesToFile("errorXKomCodes");
 
-//        Shop shopNew = new Shop();
-//        shopNew.setUrl("https://www.x-kom.pl/");
-//        shopNew.setName("x-kom");
-//        shopNew.setUrlToSearchProduct("https://www.x-kom.pl/p/");
-//
-//        if (!shopRepository.existsByUrl(shopNew.getUrl())) {
-//            shopRepository.save(shopNew);
-//        }
-//
-//        Optional<Shop> shopOpt = shopRepository.findByUrl(shopNew.getUrl());
-//        Shop shop = null;
-//        if (shopOpt.isPresent()) {
-//            shop = shopOpt.get();
-//        }
+        Shop shopNew = new Shop();
+        shopNew.setUrl("https://www.x-kom.pl/");
+        shopNew.setName("x-kom");
+        shopNew.setUrlToSearchProduct("https://www.x-kom.pl/p/");
+
+        if (!shopRepository.existsByUrl(shopNew.getUrl())) {
+            shopRepository.save(shopNew);
+        }
+
+        Optional<Shop> shopOpt = shopRepository.findByUrl(shopNew.getUrl());
+        Shop shop = null;
+        if (shopOpt.isPresent()) {
+            shop = shopOpt.get();
+        }
 
 //        scannerService.getCodesFromFile(shop);
 //
@@ -69,9 +69,9 @@ public class PriceScannerApplication {
 //        }
 //
 //
-//        if (shop != null) {
-//            existingCodesService.getExistingCodesFromRange(shop, 485000, 490000);
-//        }
+        if (shop != null) {
+            existingCodesService.getExistingCodesFromRangeInSeries(shop, 0, 5000, 1000);
+        }
 //
 //        shopOpt = shopRepository.findByUrlAndFetchCodes(shopNew.getUrl());
 //

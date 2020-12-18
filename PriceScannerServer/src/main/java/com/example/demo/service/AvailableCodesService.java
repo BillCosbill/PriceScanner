@@ -6,7 +6,8 @@ import com.example.demo.model.ErrorCode;
 import com.example.demo.model.Shop;
 import com.example.demo.repository.AvailableCodeRepository;
 import com.example.demo.repository.ErrorCodeRepository;
-import com.example.demo.service.threadServices.AvailableCodesThreadService;
+import com.example.demo.service.thread_services.AvailableCodesThreadService;
+import com.example.demo.service.thread_services.ExistingCodesThreadService;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -48,6 +49,7 @@ public class AvailableCodesService {
         int perThread = countCodes / threadsNumber;
 
         log.info("Started searching for available codes");
+        log.info("This may take up to " + countCodes * (ExistingCodesThreadService.MAX_DELAY_IN_MILLISECONDS / 1000) / threadsNumber  + " seconds");
 
         for (int i = 0; i < threadsNumber; i++) {
             int startCode = (i * perThread);
