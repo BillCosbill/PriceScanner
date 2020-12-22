@@ -4,8 +4,7 @@ import com.example.demo.model.Code;
 import com.example.demo.model.Shop;
 import com.example.demo.model.enums.CodeStatus;
 import com.example.demo.model.enums.WebScraperOperation;
-import com.example.demo.service.AvailableCodesService;
-import com.example.demo.service.ExistingCodesService;
+import com.example.demo.service.CodeService;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -13,11 +12,10 @@ import org.jsoup.nodes.Document;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.*;
-import java.util.concurrent.Callable;
+import java.util.Random;
 
 @Slf4j
-public class CodesThreadService implements Callable<Set<Code>> {
+public class CodesRunnableThreadServiceTest implements Runnable{
     public static final int MIN_DELAY_IN_MILLISECONDS = 10000;
     public static final int MAX_DELAY_IN_MILLISECONDS = 15000;
 
@@ -28,7 +26,7 @@ public class CodesThreadService implements Callable<Set<Code>> {
 
     private final WebScraperOperation webScraperOperation;
 
-    public CodesThreadService(Shop shop, long[] codesArray, WebScraperOperation webScraperOperation) {
+    public CodesRunnableThreadServiceTest(Shop shop, long[] codesArray, WebScraperOperation webScraperOperation) {
         this.shop = shop;
         this.codesArray = codesArray;
         this.url = shop.getUrlToSearchProduct();
@@ -36,25 +34,18 @@ public class CodesThreadService implements Callable<Set<Code>> {
         this.randomDelay = new Random();
     }
 
+
     @Override
-    public Set<Code> call() {
+    public void run() {
         switch (webScraperOperation) {
-            case GET_EXISTING_CODES -> {
-                return getExistingCodes();
-            }
-            case GET_AVAILABLE_CODES -> {
-                return getAvailableCodes();
-            }
-            default -> {
-                log.error("Operation " + webScraperOperation + " is not supported");
-                return Collections.emptySet();
-            }
+            case GET_EXISTING_CODES -> getExistingCodes();
+            case GET_AVAILABLE_CODES -> getAvailableCodes();
+            default -> log.error("Operation " + webScraperOperation + " is not supported");
+
         }
     }
 
-    private Set<Code> getExistingCodes() {
-        Set<Code> resultSet = new HashSet<>();
-
+    private void getExistingCodes() {
         int statusCode;
 
         for (long code : codesArray) {
@@ -72,6 +63,7 @@ public class CodesThreadService implements Callable<Set<Code>> {
                 connection.setConnectTimeout(10000);
                 connection.setReadTimeout(10000);
 
+
                 statusCode = connection.getResponseCode();
 
                 if (statusCode == HttpURLConnection.HTTP_MOVED_PERM || statusCode == HttpURLConnection.HTTP_MOVED_TEMP) {
@@ -80,7 +72,7 @@ public class CodesThreadService implements Callable<Set<Code>> {
                     newCode.setCode(code);
                     newCode.setCodeStatus(CodeStatus.REDIRECTING);
 
-                    resultSet.add(newCode);
+                    CodeService.codesSet.add(newCode);
                     log.info("FOUND CODE: " + code + ", URL: " + fullUrl);
                 }
 
@@ -91,18 +83,14 @@ public class CodesThreadService implements Callable<Set<Code>> {
                 newCode.setCode(code);
                 newCode.setCodeStatus(CodeStatus.UNKNOWN);
 
-                resultSet.add(newCode);
+                CodeService.codesSet.add(newCode);
                 log.error("Interrupted at code number " + code);
             }
         }
-
-        return resultSet;
     }
 
 
-    private Set<Code> getAvailableCodes() {
-        Set<Code> resultList = new HashSet<>();
-
+    private void getAvailableCodes() {
         for (long code : codesArray) {
 
             randomDelay();
@@ -124,8 +112,8 @@ public class CodesThreadService implements Callable<Set<Code>> {
                     newCode.setShop(shop);
                     newCode.setCode(code);
                     newCode.setCodeStatus(CodeStatus.NOT_FOUND);
-                    resultList.add(newCode);
 
+                    CodeService.codesSet.add(newCode);
                     log.error("Product with code: " + code + " not found");
                 } else {
                     if (doc.getElementsByClass("sc-1jultii-1").first() == null || fullUrl.equals(doc.location())) {
@@ -133,8 +121,8 @@ public class CodesThreadService implements Callable<Set<Code>> {
                         newCode.setShop(shop);
                         newCode.setCode(code);
                         newCode.setCodeStatus(CodeStatus.UNKNOWN);
-                        resultList.add(newCode);
 
+                        CodeService.codesSet.add(newCode);
                         log.error("Something went wrong checking product: " + fullUrl);
                     } else {
                         String cannotBeBought = doc.getElementsByClass("sc-1jultii-1").first().text();
@@ -144,7 +132,7 @@ public class CodesThreadService implements Callable<Set<Code>> {
                             newCode.setShop(shop);
                             newCode.setCode(code);
                             newCode.setCodeStatus(CodeStatus.WITHDRAWN);
-                            resultList.add(newCode);
+                            CodeService.codesSet.add(newCode);
                         }
                     }
                 }
@@ -153,13 +141,11 @@ public class CodesThreadService implements Callable<Set<Code>> {
                 newCode.setShop(shop);
                 newCode.setCode(code);
                 newCode.setCodeStatus(CodeStatus.UNKNOWN);
-                resultList.add(newCode);
 
+                CodeService.codesSet.add(newCode);
                 log.error("IOException at code number " + code, e);
             }
         }
-
-        return resultList;
     }
 
     private void randomDelay() {
@@ -167,7 +153,8 @@ public class CodesThreadService implements Callable<Set<Code>> {
             Thread.sleep(randomDelay.nextInt(MAX_DELAY_IN_MILLISECONDS - MIN_DELAY_IN_MILLISECONDS) + (long) MIN_DELAY_IN_MILLISECONDS);
         } catch (InterruptedException e) {
             log.error("Error while trying to make sleep delay at current thread");
-            Thread.currentThread().interrupt();
+            Thread.currentThread()
+                    .interrupt();
         }
     }
 }

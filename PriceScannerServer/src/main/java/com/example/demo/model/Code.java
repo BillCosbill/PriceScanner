@@ -1,5 +1,6 @@
 package com.example.demo.model;
 
+import com.example.demo.model.enums.CodeStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -17,6 +18,8 @@ public class Code {
     private Long id;
 
     private Long code;
+
+    private CodeStatus codeStatus;
 
     @JsonIgnore
     @ManyToOne

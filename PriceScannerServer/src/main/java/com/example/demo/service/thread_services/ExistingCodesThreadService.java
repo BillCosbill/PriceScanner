@@ -53,11 +53,12 @@ public class ExistingCodesThreadService extends Thread {
 
                 if (statusCode == HttpURLConnection.HTTP_MOVED_PERM || statusCode == HttpURLConnection.HTTP_MOVED_TEMP) {
                     ExistingCodesService.existsCodesSet.add(i);
+                    log.info("FOUND CODE: " + i + ", URL: " + url + i);
                 }
 
                 connection.disconnect();
             } catch (IOException e) {
-                log.error("Interrupted at code number " + i, e);
+                log.error("IOException at code number " + i);
                 ExistingCodesService.disconnectedCodesSet.add(i);
             }
         }

@@ -18,7 +18,7 @@ import java.util.Set;
 @Service
 public class ExistingCodesService {
 
-    public final static int THREADS_NUMBER = 1000;
+    public final static int THREADS_NUMBER = 500;
 
     public static Set<Integer> existsCodesSet = new HashSet<>();
     public static Set<Integer> disconnectedCodesSet = new HashSet<>();
@@ -112,7 +112,7 @@ public class ExistingCodesService {
         }
 
         log.info("Scanning " + url + " finished! Code ranges: " + from + " - " + to);
-        saveDisconnectedCodesToFile("disconnectedCodes_" + from + "_" + to);
+//        saveDisconnectedCodesToFile("disconnectedCodes_" + from + "_" + to);
 //        saveExistsCodesToDatabase(shop);
     }
 
