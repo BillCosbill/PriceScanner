@@ -1,6 +1,6 @@
 package com.example.demo.model.enums;
 
-public enum WebScraperOperation {
+public enum EWebScraperOperation {
     GET_EXISTING_CODES,
     GET_AVAILABLE_CODES,
 }

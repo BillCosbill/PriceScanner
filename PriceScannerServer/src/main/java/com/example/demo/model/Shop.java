@@ -28,11 +28,5 @@ public class Shop {
     private List<Code> productCodes;
 
     @OneToMany(mappedBy = "shop")
-    private List<ErrorCode> errorCodes;
-
-    @OneToMany(mappedBy = "shop")
-    private List<AvailableCode> availableCodes;
-
-    @OneToMany(mappedBy = "shop")
     private List<Product> products;
 }

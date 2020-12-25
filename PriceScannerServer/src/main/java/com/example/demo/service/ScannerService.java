@@ -28,9 +28,9 @@ public class ScannerService {
             while (myReader.hasNextLine()) {
                 String data = myReader.nextLine();
 
-                if (!codeRepository.existsByCode(Long.valueOf(data))) {
+                if (!codeRepository.existsByCodeValue(Long.valueOf(data))) {
                     Code code = new Code();
-                    code.setCode(Long.valueOf(data));
+                    code.setCodeValue(Long.valueOf(data));
                     code.setShop(shop);
                     codeRepository.save(code);
                 }

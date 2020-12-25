@@ -1,23 +1,21 @@
 package com.example.demo.service.thread_services;
 
-import com.example.demo.model.Code;
 import com.example.demo.model.Shop;
-import com.example.demo.model.enums.CodeStatus;
-import com.example.demo.model.enums.WebScraperOperation;
-import com.example.demo.service.AvailableCodesService;
-import com.example.demo.service.ExistingCodesService;
+import com.example.demo.model.dto.CodeDTO;
+import com.example.demo.model.enums.EWebScraperOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 @Slf4j
-public class CodesThreadService implements Callable<Set<Code>> {
+public class CodesThreadService implements Callable<Set<CodeDTO>> {
     public static final int MIN_DELAY_IN_MILLISECONDS = 10000;
     public static final int MAX_DELAY_IN_MILLISECONDS = 15000;
 
@@ -26,19 +24,19 @@ public class CodesThreadService implements Callable<Set<Code>> {
     private final String url;
     private final Random randomDelay;
 
-    private final WebScraperOperation webScraperOperation;
+    private final EWebScraperOperation eWebScraperOperation;
 
-    public CodesThreadService(Shop shop, long[] codesArray, WebScraperOperation webScraperOperation) {
+    public CodesThreadService(Shop shop, long[] codesArray, EWebScraperOperation eWebScraperOperation) {
         this.shop = shop;
         this.codesArray = codesArray;
         this.url = shop.getUrlToSearchProduct();
-        this.webScraperOperation = webScraperOperation;
+        this.eWebScraperOperation = eWebScraperOperation;
         this.randomDelay = new Random();
     }
 
     @Override
-    public Set<Code> call() {
-        switch (webScraperOperation) {
+    public Set<CodeDTO> call() {
+        switch (eWebScraperOperation) {
             case GET_EXISTING_CODES -> {
                 return getExistingCodes();
             }
@@ -46,50 +44,37 @@ public class CodesThreadService implements Callable<Set<Code>> {
                 return getAvailableCodes();
             }
             default -> {
-                log.error("Operation " + webScraperOperation + " is not supported");
+                log.error("Operation " + eWebScraperOperation + " is not supported");
                 return Collections.emptySet();
             }
         }
     }
 
-    private Set<Code> getExistingCodes() {
-        Set<Code> resultSet = new HashSet<>();
-
-        int statusCode;
+    private Set<CodeDTO> getExistingCodes() {
+        Set<CodeDTO> resultSet = new HashSet<>();
 
         for (long code : codesArray) {
             String fullUrl = url + code;
             randomDelay();
 
             try {
-                HttpURLConnection connection = (HttpURLConnection) new URL(fullUrl).openConnection();
-                connection.setInstanceFollowRedirects(false);
-                // TODO set other request headers: https://httpbin.org/anything
-                // TODO keep changing useragent to avoid beeing blocked https://developers.whatismybrowser.com/useragents/explore/operating_system_name/windows/
-                // TODO set referer, fe. google: https://www.scraperapi.com/blog/5-tips-for-web-scraping/
-                connection.addRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36");
-                connection.addRequestProperty("REFERER", "https://www.x-kom.pl/");
-                connection.setConnectTimeout(10000);
-                connection.setReadTimeout(10000);
+                Document doc = configureConnection(fullUrl);
 
-                statusCode = connection.getResponseCode();
-
-                if (statusCode == HttpURLConnection.HTTP_MOVED_PERM || statusCode == HttpURLConnection.HTTP_MOVED_TEMP) {
-                    Code newCode = new Code();
-                    newCode.setShop(shop);
-                    newCode.setCode(code);
-                    newCode.setCodeStatus(CodeStatus.REDIRECTING);
+                if (isNotRedirecting(fullUrl, doc.location())) {
+                    CodeDTO newCode = new CodeDTO();
+                    newCode.setShopId(shop.getId());
+                    newCode.setCodeValue(code);
+                    newCode.setCodeStatus("REDIRECTING");
 
                     resultSet.add(newCode);
                     log.info("FOUND CODE: " + code + ", URL: " + fullUrl);
                 }
 
-                connection.disconnect();
             } catch (IOException e) {
-                Code newCode = new Code();
-                newCode.setShop(shop);
-                newCode.setCode(code);
-                newCode.setCodeStatus(CodeStatus.UNKNOWN);
+                CodeDTO newCode = new CodeDTO();
+                newCode.setShopId(shop.getId());
+                newCode.setCodeValue(code);
+                newCode.setCodeStatus("UNKNOWN");
 
                 resultSet.add(newCode);
                 log.error("Interrupted at code number " + code);
@@ -99,67 +84,87 @@ public class CodesThreadService implements Callable<Set<Code>> {
         return resultSet;
     }
 
+    private boolean isNotRedirecting(String fullUrl, String location) {
+        return !location.equals(fullUrl);
+    }
 
-    private Set<Code> getAvailableCodes() {
-        Set<Code> resultList = new HashSet<>();
+    private Set<CodeDTO> getAvailableCodes() {
+        Set<CodeDTO> resultSet = new HashSet<>();
 
         for (long code : codesArray) {
-
             randomDelay();
-
             String fullUrl = shop.getUrlToSearchProduct() + code;
 
             try {
-                // TODO check your useragent: https://gs.statcounter.com/detect
-                Document doc = Jsoup.connect(fullUrl)
-                        // TODO set other request headers: https://httpbin.org/anything
-                        // TODO keep changing useragent to avoid beeing blocked https://developers.whatismybrowser.com/useragents/explore/operating_system_name/windows/
-                        .userAgent("Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
-                        // TODO set referer, fe. google: https://www.scraperapi.com/blog/5-tips-for-web-scraping/
-                        .referrer("https://www.x-kom.pl/")
-                        .timeout(60 * 1000).get();
+                Document doc = configureConnection(fullUrl);
 
-                if (doc.getElementsByClass("lw463u-5").first() != null && doc.getElementsByClass("lw463u-5").first().text().equals("Przepraszamy")) {
-                    Code newCode = new Code();
-                    newCode.setShop(shop);
-                    newCode.setCode(code);
-                    newCode.setCodeStatus(CodeStatus.NOT_FOUND);
-                    resultList.add(newCode);
+                if (isProductNotFound(doc)) {
+                    CodeDTO newCode = new CodeDTO();
+                    newCode.setShopId(shop.getId());
+                    newCode.setCodeValue(code);
+                    newCode.setCodeStatus("NOT_FOUND");
+                    resultSet.add(newCode);
 
                     log.error("Product with code: " + code + " not found");
                 } else {
-                    if (doc.getElementsByClass("sc-1jultii-1").first() == null || fullUrl.equals(doc.location())) {
-                        Code newCode = new Code();
-                        newCode.setShop(shop);
-                        newCode.setCode(code);
-                        newCode.setCodeStatus(CodeStatus.UNKNOWN);
-                        resultList.add(newCode);
+                    if (isAnUnsupportedBehavior(fullUrl, doc)) {
+                        CodeDTO newCode = new CodeDTO();
+                        newCode.setShopId(shop.getId());
+                        newCode.setCodeValue(code);
+                        newCode.setCodeStatus("UNKNOWN");
+                        resultSet.add(newCode);
 
                         log.error("Something went wrong checking product: " + fullUrl);
                     } else {
-                        String cannotBeBought = doc.getElementsByClass("sc-1jultii-1").first().text();
+                        if (isWithdrawn(doc)) {
+                            CodeDTO newCode = new CodeDTO();
+                            newCode.setShopId(shop.getId());
+                            newCode.setCodeValue(code);
+                            newCode.setCodeStatus("WITHDRAWN");
+                            resultSet.add(newCode);
 
-                        if (!cannotBeBought.equals("Wycofany")) {
-                            Code newCode = new Code();
-                            newCode.setShop(shop);
-                            newCode.setCode(code);
-                            newCode.setCodeStatus(CodeStatus.WITHDRAWN);
-                            resultList.add(newCode);
+                            log.error("Product with code: " + code + " is withdrawn");
                         }
                     }
                 }
             } catch (IOException e) {
-                Code newCode = new Code();
-                newCode.setShop(shop);
-                newCode.setCode(code);
-                newCode.setCodeStatus(CodeStatus.UNKNOWN);
-                resultList.add(newCode);
+                CodeDTO newCode = new CodeDTO();
+                newCode.setShopId(shop.getId());
+                newCode.setCodeValue(code);
+                newCode.setCodeStatus("UNKNOWN");
+                resultSet.add(newCode);
 
                 log.error("IOException at code number " + code, e);
             }
         }
 
-        return resultList;
+        return resultSet;
+    }
+
+    private boolean isAnUnsupportedBehavior(String fullUrl, Document doc) {
+        return doc.getElementsByClass("sc-1jultii-1")
+                .first() == null || fullUrl.equals(doc.location());
+    }
+
+    private boolean isWithdrawn(Document document) {
+        String availabilityInformation = document.getElementsByClass("sc-1jultii-1").first().text();
+        return availabilityInformation.equals("Wycofany");
+    }
+
+    private boolean isProductNotFound(Document doc) {
+        return doc.getElementsByClass("lw463u-5").first() != null && doc.getElementsByClass("lw463u-5").first().text().equals("Przepraszamy");
+    }
+
+    private Document configureConnection(String fullUrl) throws IOException {
+        // TODO check your useragent: https://gs.statcounter.com/detect
+        return Jsoup.connect(fullUrl)
+                // TODO set other request headers: https://httpbin.org/anything
+                // TODO keep changing useragent to avoid beeing blocked https://developers.whatismybrowser.com/useragents/explore/operating_system_name/windows/
+                .userAgent("Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
+                // TODO set referer, fe. google: https://www.scraperapi.com/blog/5-tips-for-web-scraping/
+                .referrer("https://www.x-kom.pl/")
+                .timeout(60 * 1000)
+                .get();
     }
 
     private void randomDelay() {
@@ -167,7 +172,29 @@ public class CodesThreadService implements Callable<Set<Code>> {
             Thread.sleep(randomDelay.nextInt(MAX_DELAY_IN_MILLISECONDS - MIN_DELAY_IN_MILLISECONDS) + (long) MIN_DELAY_IN_MILLISECONDS);
         } catch (InterruptedException e) {
             log.error("Error while trying to make sleep delay at current thread");
-            Thread.currentThread().interrupt();
+            Thread.currentThread()
+                    .interrupt();
         }
     }
 }
+
+
+// TODO checking connection status if JSoup doesnt work
+
+//                HttpURLConnection connection = (HttpURLConnection) new URL(fullUrl).openConnection();
+//                connection.setInstanceFollowRedirects(false);
+//                connection.addRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36");
+//                connection.addRequestProperty("REFERER", "https://www.x-kom.pl/");
+//                connection.setConnectTimeout(10000);
+//                connection.setReadTimeout(10000);
+//                statusCode = connection.getResponseCode();
+//                if (statusCode == HttpURLConnection.HTTP_MOVED_PERM || statusCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+//                    CodeDTO newCode = new CodeDTO();
+//                    newCode.setShopId(shop.getId());
+//                    newCode.setCodeValue(code);
+//                    newCode.setCodeStatus("REDIRECTING");
+//
+//                    resultSet.add(newCode);
+//                    log.info("FOUND CODE: " + code + ", URL: " + fullUrl);
+//                }
+//                connection.disconnect();
